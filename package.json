@@ -3,10 +3,11 @@
   "version": "1.0.0",
   "main": "lib/password.js",
   "scripts": {
-    "build": "babel src --out-dir lib",
-    "lint": "standard \"src/**/*.js\"",
-    "test": "mocha \"src/**/*.test.js\" --require @babel/register",
-    "test:coverage": "nyc --reporter lcovonly --reporter text yarn test",
+    "build": "tsc",
+    "lint": "tslint --fix --project .",
+    "format": "prettier \"src/**/*.ts\" --write",
+    "test": "mocha \"src/**/*.test.ts\" --require ts-node/register --require source-map-support/register",
+    "test:coverage": "nyc --extension .ts --exclude \"src/**/*.test.ts\" --reporter lcovonly --reporter text yarn test",
     "prepare": "yarn build"
   },
   "repository": "git+https://github.com/tleef/password-js.git",
@@ -17,22 +18,25 @@
   },
   "homepage": "https://github.com/tleef/password-js#readme",
   "devDependencies": {
-    "@babel/cli": "^7.0.0-rc.1",
-    "@babel/core": "^7.0.0-rc.1",
-    "@babel/plugin-transform-runtime": "^7.0.0-rc.1",
-    "@babel/preset-env": "^7.0.0-rc.1",
-    "@babel/register": "^7.0.0-rc.1",
-    "chai": "^4.1.2",
+    "@types/chai": "^4.1.7",
+    "@types/chai-as-promised": "^7.1.0",
+    "@types/mocha": "^5.2.6",
+    "@types/node": "^11.13.0",
+    "@types/sinon": "^7.0.11",
+    "@types/sinon-chai": "^3.2.2",
+    "chai": "^4.2.0",
     "chai-as-promised": "^7.1.1",
-    "coveralls": "^3.0.2",
-    "mocha": "^5.2.0",
-    "nyc": "^12.0.2",
-    "sinon": "^6.1.5",
-    "sinon-chai": "^3.2.0",
-    "standard": "^11.0.1"
+    "coveralls": "^3.0.3",
+    "mocha": "^6.0.2",
+    "nyc": "^13.3.0",
+    "prettier": "^1.16.4",
+    "sinon": "^7.3.1",
+    "sinon-chai": "^3.3.0",
+    "ts-node": "^8.0.3",
+    "tslint": "^5.15.0",
+    "typescript": "^3.4.2"
   },
   "dependencies": {
-    "@babel/runtime": "^7.0.0-rc.1",
     "@tleef/type-js": "^1.3.2"
   }
 }
