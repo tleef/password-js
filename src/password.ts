@@ -1,20 +1,36 @@
-import * as crypto from "crypto";
-
 import type from "@tleef/type-js";
+import * as crypto from "crypto";
+import HashError from "./errors/HashError";
+import VerifyError from "./errors/VerifyError";
+import pbkdf2 from "./pbkdf2";
+import { HashFunction, VerifyFunction } from "./types";
 
 const saltLen = 64;
 
-const params = {
-  pbkdf2: {
-    digest: "sha512",
-    iterations: 100000,
-    keyLen: 256,
-  },
+export const algorithms = {
+  pbkdf2: pbkdf2.name,
 };
 
-const hash = async (password: string, salt?: string) => {
+const hashFunctions: { [key: string]: HashFunction } = {
+  [algorithms.pbkdf2]: pbkdf2.hash,
+};
+
+const verifyFunctions: { [key: string]: VerifyFunction } = {
+  [algorithms.pbkdf2]: pbkdf2.verify,
+};
+
+const hash = async (
+  password: string,
+  salt?: string,
+  algorithm = algorithms.pbkdf2,
+  options?: any,
+) => {
   if (!password || !type.isString(password)) {
-    throw new Error("password must be a non-empty String");
+    throw new HashError("password must be a non-empty String");
+  }
+
+  if (!Object.values(algorithms).includes(algorithm)) {
+    throw new HashError("algorithm is not supported");
   }
 
   let saltBuf;
@@ -27,82 +43,49 @@ const hash = async (password: string, salt?: string) => {
     try {
       saltBuf = await randomBytes(saltLen);
     } catch (e) {
-      throw new Error("error generating salt");
+      throw new HashError("error generating salt");
     }
   }
 
-  let key;
+  const hashFunction = hashFunctions[algorithm];
 
   try {
-    key = await pbkdf2(
-      password,
-      saltBuf,
-      params.pbkdf2.iterations,
-      params.pbkdf2.keyLen,
-      params.pbkdf2.digest,
-    );
+    return await hashFunction(password, saltBuf, options);
   } catch (e) {
-    throw new Error("error hashing password with pbkdf2");
+    if (e instanceof HashError) {
+      throw e;
+    }
+    throw new HashError(`error hashing password with ${algorithm}`);
   }
-
-  return `pbkdf2$${params.pbkdf2.iterations}$${saltBuf.toString(
-    "hex",
-  )}$${key.toString("hex")}`;
 };
 
 const verify = async (password: string, checkHash: string) => {
   if (!password || !type.isString(password)) {
-    throw new Error("password must be a non-empty String");
+    throw new VerifyError("password must be a non-empty String");
   }
 
   if (!checkHash || !type.isString(checkHash)) {
-    throw new Error("hash must be a non-empty String");
+    throw new VerifyError("hash must be a non-empty String");
   }
 
   const key = checkHash.split("$");
+  const algorithm = key[0];
 
-  if (key.length !== 4 || !key[0] || !key[1] || !key[2] || !key[3]) {
-    throw new Error("hash not formatted correctly");
+  if (!Object.values(algorithms).includes(algorithm)) {
+    throw new VerifyError("algorithm is not supported");
   }
 
-  if (key[0] !== "pbkdf2") {
-    throw new Error("hash uses wrong algorithm");
+  const verifyFunction = verifyFunctions[algorithm];
+
+  try {
+    return await verifyFunction(password, checkHash);
+  } catch (e) {
+    if (e instanceof VerifyError) {
+      throw e;
+    }
+    throw new VerifyError(`error verifying password with ${algorithm}`);
   }
-
-  if (key[1] !== params.pbkdf2.iterations.toString()) {
-    throw new Error("hash uses wrong number of iterations");
-  }
-
-  const hashedPassword = await hash(password, key[2]);
-
-  return hashedPassword === checkHash;
 };
-
-function pbkdf2(
-  password: string,
-  salt: Buffer,
-  iterations: number,
-  keyLen: number,
-  digest: string,
-): Promise<Buffer> {
-  return new Promise((resolve, reject) => {
-    crypto.pbkdf2(
-      password,
-      salt,
-      iterations,
-      keyLen,
-      digest,
-      (err, derivedKey) => {
-        if (err) {
-          reject(err);
-          return;
-        }
-
-        resolve(derivedKey);
-      },
-    );
-  });
-}
 
 function randomBytes(size: number): Promise<Buffer> {
   return new Promise((resolve, reject) => {

@@ -8,6 +8,7 @@ import * as chaiAsPromised from "chai-as-promised";
 import * as crypto from "crypto";
 
 import pwd from "./password";
+import pbkdf2 from "./pbkdf2";
 
 const expect = chai.expect;
 
@@ -17,7 +18,9 @@ chai.use(chaiAsPromised);
 describe("password.ts", () => {
   describe("#hash()", () => {
     it("should successfully hash a password", async () => {
-      const hash = await pwd.hash("SuperSecretPassword");
+      const hash = await pwd.hash("SuperSecretPassword", undefined, undefined, {
+        iterations: 100,
+      });
 
       expect(hash).to.be.a("string");
     });
@@ -79,7 +82,9 @@ describe("password.ts", () => {
     it("should successfully verify a password", async () => {
       const res = await pwd.verify(
         "SuperSecretPassword",
-        await pwd.hash("SuperSecretPassword"),
+        await pwd.hash("SuperSecretPassword", undefined, undefined, {
+          iterations: 100,
+        }),
       );
 
       expect(res).to.equal(true);
@@ -88,7 +93,9 @@ describe("password.ts", () => {
     it("should not verify incorrectly password", async () => {
       const res = await pwd.verify(
         "SuperSecretPassword",
-        await pwd.hash("superSecretPassword"),
+        await pwd.hash("superSecretPassword", undefined, undefined, {
+          iterations: 100,
+        }),
       );
 
       expect(res).to.equal(false);
@@ -124,42 +131,16 @@ describe("password.ts", () => {
 
     it("should throw if hash is wrong length", async () => {
       // @ts-ignore
-      await expect(pwd.verify("test", "one$two$three")).to.be.rejectedWith(
-        "hash not formatted correctly",
-      );
-    });
-
-    it("should throw if hash is missing data", async () => {
-      // @ts-ignore
-      await expect(pwd.verify("test", "$two$three$four")).to.be.rejectedWith(
-        "hash not formatted correctly",
-      );
-      // @ts-ignore
-      await expect(pwd.verify("test", "one$$three$four")).to.be.rejectedWith(
-        "hash not formatted correctly",
-      );
-      // @ts-ignore
-      await expect(pwd.verify("test", "one$two$$four")).to.be.rejectedWith(
-        "hash not formatted correctly",
-      );
-      // @ts-ignore
-      await expect(pwd.verify("test", "one$two$three$")).to.be.rejectedWith(
-        "hash not formatted correctly",
-      );
-    });
-
-    it("should throw if hash uses wrong algorithm", async () => {
-      // @ts-ignore
-      await expect(pwd.verify("test", "one$two$three$four")).to.be.rejectedWith(
-        "hash uses wrong algorithm",
-      );
-    });
-
-    it("should throw if hash uses wrong number of iterations", async () => {
       await expect(
-        pwd.verify("test", "pbkdf2$two$three$four"),
-        // @ts-ignore
-      ).to.be.rejectedWith("hash uses wrong number of iterations");
+        pwd.verify("test", `${pbkdf2.name}$two$three`),
+      ).to.be.rejectedWith("hash not formatted correctly");
+    });
+
+    it("should throw if hash is not supported", async () => {
+      // @ts-ignore
+      await expect(pwd.verify("test", "bad$two$three")).to.be.rejectedWith(
+        "algorithm is not supported",
+      );
     });
   });
 });
