@@ -5,7 +5,7 @@ import VerifyError from "./errors/VerifyError";
 import pbkdf2 from "./pbkdf2";
 import { HashFunction, VerifyFunction } from "./types";
 
-const saltLen = 64;
+const saltLen = 32;
 
 export const algorithms = {
   pbkdf2: pbkdf2.name,
